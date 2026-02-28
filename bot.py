@@ -1,3 +1,4 @@
+import os
 import json
 import datetime
 from telegram import Update
@@ -8,10 +9,11 @@ from telegram.ext import (
     ContextTypes,
 )
 
-TOKEN = "8637185544:AAH0U3NYjIT5FEJi216NpitVQzlnVHTbx-U"
+TOKEN = os.getenv("TOKEN")
 GROUP_ID = -1003567037436
 
-
+if not TOKEN:
+    raise ValueError("NO se encontro el token en las variables de entorno")
 # --------- BASE DE DATOS SIMPLE ---------
 def cargar_datos():
     try:

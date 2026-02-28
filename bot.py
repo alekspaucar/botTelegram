@@ -14,6 +14,9 @@ GROUP_ID = -1003567037436
 
 if not TOKEN:
     raise ValueError("NO se encontro el token en las variables de entorno")
+
+async def start(update, context):
+    await update.message.reply_text("bot activooooo")
 # --------- BASE DE DATOS SIMPLE ---------
 def cargar_datos():
     try:

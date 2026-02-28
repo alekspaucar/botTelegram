@@ -1,95 +1,76 @@
 import os
-import json
-import datetime
+from datetime import datetime, timedelta
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
-    ChatMemberHandler,
     ContextTypes,
 )
+import asyncio
 
+# ===== CONFIG =====
 TOKEN = os.getenv("TOKEN")
-GROUP_ID = -1003567037436
+GROUP_ID = -1001234567890  # ⚠️ CAMBIA ESTO por tu ID real
 
 if not TOKEN:
     raise ValueError("NO se encontro el token en las variables de entorno")
 
-async def start(update, context):
-    await update.message.reply_text("bot activooooo")
-# --------- BASE DE DATOS SIMPLE ---------
-def cargar_datos():
+# ===== BASE SIMPLE EN MEMORIA =====
+usuarios = {}
+
+# ===== COMANDOS =====
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Bot activo ✅")
+
+async def agregar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        with open("usuarios.json", "r") as f:
-            return json.load(f)
-    except:
-        return {}
+        user_id = int(context.args[0])
+        dias = int(context.args[1])
 
+        fecha_vencimiento = datetime.now() + timedelta(days=dias)
+        usuarios[user_id] = fecha_vencimiento
 
-def guardar_datos(datos):
-    with open("usuarios.json", "w") as f:
-        json.dump(datos, f)
+        invite_link = await context.bot.create_chat_invite_link(
+            chat_id=GROUP_ID,
+            member_limit=1
+        )
 
-
-# --------- ACTIVAR USUARIO (SOLO ADMIN) ---------
-async def activar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.id != GROUP_ID:
-        return
-
-    if not update.message.reply_to_message:
         await update.message.reply_text(
-            "Responde al mensaje del usuario con: /activar 30"
-        )
-        return
-
-    dias = int(context.args[0])
-    usuario_id = update.message.reply_to_message.from_user.id
-
-    datos = cargar_datos()
-    fecha_vencimiento = (
-        datetime.datetime.now() + datetime.timedelta(days=dias)
-    ).strftime("%Y-%m-%d")
-
-    datos[str(usuario_id)] = fecha_vencimiento
-    guardar_datos(datos)
-
-    await update.message.reply_text(
-        f"Usuario activado hasta {fecha_vencimiento}"
-    )
-
-
-# --------- DETECTAR NUEVOS MIEMBROS ---------
-async def nuevo_miembro(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    for miembro in update.chat_member.new_chat_members:
-        await context.bot.send_message(
-            GROUP_ID,
-            f"Bienvenido {miembro.first_name}\nUn administrador debe activarte.",
+            f"Usuario agregado hasta {fecha_vencimiento.strftime('%Y-%m-%d')} ✅\n"
+            f"Link de acceso:\n{invite_link.invite_link}"
         )
 
+    except:
+        await update.message.reply_text(
+            "Uso correcto:\n/agregar ID_USUARIO DIAS"
+        )
 
-# --------- REVISIÓN DIARIA ---------
 async def revisar_vencimientos(context: ContextTypes.DEFAULT_TYPE):
-    datos = cargar_datos()
-    hoy = datetime.datetime.now().strftime("%Y-%m-%d")
+    ahora = datetime.now()
 
-    for user_id, fecha in list(datos.items()):
-        if fecha <= hoy:
+    for user_id, fecha in list(usuarios.items()):
+        if ahora > fecha:
             try:
-                await context.bot.ban_chat_member(GROUP_ID, int(user_id))
-                del datos[user_id]
-            except:
-                pass
+                await context.bot.ban_chat_member(GROUP_ID, user_id)
+                await context.bot.unban_chat_member(GROUP_ID, user_id)
+                del usuarios[user_id]
+                print(f"Usuario {user_id} eliminado por vencimiento")
+            except Exception as e:
+                print(f"Error eliminando usuario {user_id}: {e}")
 
-    guardar_datos(datos)
+# ===== MAIN =====
 
+async def main():
+    app = ApplicationBuilder().token(TOKEN).build()
 
-# --------- INICIAR BOT ---------
-app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("agregar", agregar))
 
-app.add_handler(CommandHandler("activar", activar))
-app.add_handler(ChatMemberHandler(nuevo_miembro, ChatMemberHandler.CHAT_MEMBER))
+    app.job_queue.run_repeating(revisar_vencimientos, interval=3600, first=10)
 
-app.job_queue.run_repeating(revisar_vencimientos, interval=86400, first=10)
+    print("Bot funcionando...")
+    await app.run_polling()
 
-print("Bot funcionando...")
-app.run_polling()
+if __name__ == "__main__":
+    asyncio.run(main())

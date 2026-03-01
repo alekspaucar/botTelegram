@@ -1,4 +1,5 @@
 import os
+import asyncio
 from datetime import datetime, timedelta
 from telegram import Update
 from telegram.ext import (
@@ -6,67 +7,67 @@ from telegram.ext import (
     CommandHandler,
     ContextTypes,
 )
-import asyncio
 
-# ===== CONFIG =====
-TOKEN = os.getenv("TOKEN")
-GROUP_ID = -1001234567890  # ⚠️ CAMBIA ESTO por tu ID real
+TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_ID = 8315102092  
+GROUP_ID = -1003828473755 
 
-if not TOKEN:
-    raise ValueError("NO se encontro el token en las variables de entorno")
-
-# ===== BASE SIMPLE EN MEMORIA =====
-usuarios = {}
-
-# ===== COMANDOS =====
+usuarios_activos = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Bot activo ✅")
+    await update.message.reply_text(
+        "Bienvenido 🔥\n\nEnvíame tu comprobante de pago."
+    )
 
-async def agregar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        user_id = int(context.args[0])
-        dias = int(context.args[1])
+async def aprobar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
 
-        fecha_vencimiento = datetime.now() + timedelta(days=dias)
-        usuarios[user_id] = fecha_vencimiento
+    if not context.args:
+        await update.message.reply_text("Usa: /aprobar ID_USUARIO")
+        return
 
-        invite_link = await context.bot.create_chat_invite_link(
-            chat_id=GROUP_ID,
-            member_limit=1
-        )
+    user_id = int(context.args[0])
+    fecha_vencimiento = datetime.now() + timedelta(days=30)
+    usuarios_activos[user_id] = fecha_vencimiento
 
-        await update.message.reply_text(
-            f"Usuario agregado hasta {fecha_vencimiento.strftime('%Y-%m-%d')} ✅\n"
-            f"Link de acceso:\n{invite_link.invite_link}"
-        )
+    link = await context.bot.create_chat_invite_link(
+        chat_id=GROUP_ID,
+        member_limit=1
+    )
 
-    except:
-        await update.message.reply_text(
-            "Uso correcto:\n/agregar ID_USUARIO DIAS"
-        )
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=f"Pago aprobado ✅\n\nEntra al grupo:\n{link.invite_link}"
+    )
+
+    await update.message.reply_text("Usuario aprobado 🔥")
 
 async def revisar_vencimientos(context: ContextTypes.DEFAULT_TYPE):
     ahora = datetime.now()
 
-    for user_id, fecha in list(usuarios.items()):
-        if ahora > fecha:
+    for user_id, fecha in list(usuarios_activos.items()):
+        if ahora >= fecha:
             try:
                 await context.bot.ban_chat_member(GROUP_ID, user_id)
                 await context.bot.unban_chat_member(GROUP_ID, user_id)
-                del usuarios[user_id]
-                print(f"Usuario {user_id} eliminado por vencimiento")
-            except Exception as e:
-                print(f"Error eliminando usuario {user_id}: {e}")
+            except:
+                pass
+            del usuarios_activos[user_id]
 
-# ===== MAIN =====
-
+# 🔥 CAMBIO CRÍTICO: main() ya no es 'async def'
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    print("Bot funcionando...")
-    app.run_polling()
+    app.add_handler(CommandHandler("aprobar", aprobar))
+
+    job_queue = app.job_queue
+    job_queue.run_repeating(revisar_vencimientos, interval=60)
+
+    print("Bot funcionando en Railway...")
+    # drop_pending_updates ignora los mensajes viejos acumulados al reiniciar
+    app.run_polling(drop_pending_updates=True) 
 
 if __name__ == "__main__":
     main()

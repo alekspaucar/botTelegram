@@ -11,7 +11,7 @@ from telegram.ext import (
     filters,
 )
 
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("TOKEN")
 ADMIN_ID = 8315102092  
 GROUP_ID = -1003828473755 
 

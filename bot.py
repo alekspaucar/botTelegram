@@ -11,6 +11,7 @@ from telegram.ext import (
     filters,
 )
 
+# 🔥 Cambiado a "TOKEN" como lo pediste
 TOKEN = os.getenv("TOKEN")
 ADMIN_ID = 8315102092  
 GROUP_ID = -1003828473755 
@@ -39,13 +40,24 @@ usuarios_activos = cargar_datos()
 # --- LÓGICA DEL BOT ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # 🔥 ARREGLO 1: Si no es un chat privado (es un grupo), el bot ignora el mensaje
+    # Solo responde en chat privado
     if update.effective_chat.type != ChatType.PRIVATE:
         return
 
-    await update.message.reply_text(
-        "Bienvenido 🔥\n\nPor favor, envíame una foto de tu comprobante de pago."
+    mensaje = (
+        "¡Hola, amor! 💕 Qué rico tenerte por aquí...\n\n"
+        "Estás a un pasito de entrar a mi VIP exclusivo donde subo todo mi contenido más íntimo y sin censura 😈🔥.\n\n"
+        "Ahorita la suscripción está a solo **$5 por 30 días** 💸. ¡Aprovecha mi amor, porque mientras más contenido vaya acumulando, el precio va a subir! 😏\n\n"
+        "Para entrar ya mismo, haz la transferencia a la cuenta de mi manager:\n\n"
+        "🏦 **Banco Pichincha**\n"
+        "👤 **Nombre:** Erick Alexander Vizhñay Paucar\n"
+        "🆔 **Cédula:** 0151218468\n"
+        "💳 **Nro. Cuenta:** 2212355283\n\n"
+        "👉 Cuando hagas el pago, **envíame la foto del comprobante aquí mismo** y te doy tu pase VIP personal al instante.\n\n"
+        "¡Te espero adentro, guapo! 💋✨"
     )
+
+    await update.message.reply_text(mensaje, parse_mode="Markdown")
 
 async def recibir_comprobante(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Solo procesar en chat privado
@@ -53,14 +65,16 @@ async def recibir_comprobante(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     user = update.effective_user
-    # 🔥 ARREGLO 2: Te reenvía la foto al Admin
+    
+    # Reenvía la foto al Admin
     await context.bot.send_photo(
         chat_id=ADMIN_ID,
         photo=update.message.photo[-1].file_id,
         caption=f"📩 **Nuevo Comprobante**\n\nUsuario: @{user.username}\nID: `{user.id}`\n\nPara aprobar usa:\n`/aprobar {user.id}`",
         parse_mode="Markdown"
     )
-    await update.message.reply_text("✅ Comprobante enviado. El administrador lo revisará pronto.")
+    # Mensaje coqueto de espera para el cliente
+    await update.message.reply_text("✅ Comprobante enviado, mi amor. Dame un ratito que lo reviso y te doy tu acceso. 😘")
 
 async def aprobar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -82,9 +96,10 @@ async def aprobar(update: Update, context: ContextTypes.DEFAULT_TYPE):
             member_limit=1
         )
 
+        # Mensaje de entrada con el link
         await context.bot.send_message(
             chat_id=user_id,
-            text=f"Pago aprobado ✅\n\nEntra al grupo (El enlace es de 1 solo uso):\n{link.invite_link}"
+            text=f"¡Pago verificado, guapo! ✅💸\n\nAquí tienes tu pase de entrada exclusivo (es de 1 solo uso, no lo compartas). ¡Disfruta! 😈👇\n{link.invite_link}"
         )
 
         await update.message.reply_text(f"Usuario {user_id} aprobado y guardado en la BD 🔥")
@@ -101,7 +116,12 @@ async def revisar_vencimientos(context: ContextTypes.DEFAULT_TYPE):
                 # Expulsa al usuario
                 await context.bot.ban_chat_member(GROUP_ID, user_id)
                 await context.bot.unban_chat_member(GROUP_ID, user_id)
-                await context.bot.send_message(user_id, "Tu suscripción de 30 días ha expirado. 😔\nRenueva enviando un nuevo comprobante aquí.")
+                
+                # Mensaje de vencimiento coqueto para que renueve
+                await context.bot.send_message(
+                    user_id, 
+                    "Ay, amor... Tus 30 días de suscripción VIP se han terminado. 🥺\n\nPero no te preocupes, ¡puedes renovar ahorita mismo! Mándame el nuevo comprobante de $5 por aquí y te devuelvo el acceso rapidito. 💋🔥"
+                )
             except:
                 pass
             

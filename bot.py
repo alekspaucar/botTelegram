@@ -61,16 +61,12 @@ async def revisar_vencimientos(context: ContextTypes.DEFAULT_TYPE):
 
 # ===== MAIN =====
 
-async def main():
+def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("agregar", agregar))
-
-    app.job_queue.run_repeating(revisar_vencimientos, interval=3600, first=10)
-
     print("Bot funcionando...")
-    await app.run_polling()
+    app.run_polling()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

@@ -16,7 +16,7 @@ TOKEN = os.getenv("TOKEN")
 ADMIN_ID = 8315102092  
 GROUP_ID = -1003828473755 
 
-ARCHIVO_DATOS = "usuarios_activos.json"
+ARCHIVO_DATOS = "/data/usuarios_activos.json"
 
 # --- BASE DE DATOS ---
 
